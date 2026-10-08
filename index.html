@@ -1,0 +1,2553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GridPolicy — Readable, tested rules for congestion, learned from your own operators.</title>
+  <meta name="description" content="GridPolicy turns your operators' past decisions and your grid simulations into short, tested, readable rules, and a playbook for the risks detected in advance.">
+  <link rel="canonical" href="https://gridpolicy.ch/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GridPolicy — Readable, tested rules for congestion, learned from your own operators.">
+  <meta property="og:description" content="GridPolicy turns your operators' past decisions and your grid simulations into short, tested, readable rules, and a playbook for the risks detected in advance.">
+  <meta property="og:url" content="https://gridpolicy.ch/">
+  <meta property="og:image" content="/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GridPolicy — Readable, tested rules for congestion, learned from your own operators.">
+  <meta name="twitter:description" content="GridPolicy turns your operators' past decisions and your grid simulations into short, tested, readable rules, and a playbook for the risks detected in advance.">
+  <meta name="twitter:image" content="/og.png">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f4f2ec">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231eb888'/%3E%3Ccircle cx='8' cy='20' r='2.3' fill='none' stroke='%23161a1e' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='9' r='2.3' fill='none' stroke='%23161a1e' stroke-width='1.5'/%3E%3Ccircle cx='25' cy='18' r='2.3' fill='none' stroke='%23161a1e' stroke-width='1.5'/%3E%3Cpath d='M10 19.2 L14.2 10.6 M17.8 10.2 L23.2 16.8 M10.2 20.6 L22.8 19' fill='none' stroke='%23161a1e' stroke-width='1.5'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f4f2ec;
+      --ink: #161a1e;
+      --ink-2: #3e474f;
+      --ink-3: #5c656e;
+      --rule: rgba(22, 26, 30, 0.18);
+      --rule-strong: rgba(22, 26, 30, 0.45);
+      --track: #d5d0c6;
+      --bar: #c4bfb4;
+      --brand: #1eb888;
+      --brand-hover: #17956f;
+      --green: #1f8a4c;
+      --amber: #c98a0b;
+      --red: #c8321e;
+      --open: #8a8478;
+      --tripped: #a39e93;
+      --sans: "IBM Plex Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --wrap: 1120px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 17px;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+    ::selection { background: var(--brand); color: var(--ink); }
+    img, svg { max-width: 100%; }
+    a { color: inherit; text-underline-offset: 3px; }
+    a:hover { text-decoration-color: var(--ink); }
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 3px;
+    }
+    .skip {
+      position: absolute;
+      left: 12px;
+      top: -48px;
+      background: var(--brand);
+      color: var(--ink);
+      padding: 8px 12px;
+      z-index: 20;
+    }
+    .skip:focus { top: 12px; }
+
+    .wrap {
+      width: min(var(--wrap), calc(100% - 40px));
+      margin-inline: auto;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+    }
+    .header-inner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 64px;
+      padding: 10px 0;
+      margin-bottom: -10px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      margin: 0 28px 10px 0;
+      text-decoration: none;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+    .mark {
+      width: 11px;
+      height: 11px;
+      background: var(--brand);
+      display: inline-block;
+      flex: none;
+      margin-right: 8px;
+    }
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      margin: 0 0 6px;
+    }
+    .nav a, .nav .sep { margin: 0 8px 4px 0; }
+    .nav a {
+      font-family: var(--mono);
+      font-size: 12px;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+    .nav a:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink); }
+    .nav .sep { color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
+
+    .hero { padding: 56px 0 28px; }
+    .mint-rule { width: 36px; height: 3px; background: var(--brand); margin: 0 0 16px; }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      color: var(--ink-3);
+      margin: 0 0 14px;
+    }
+    h1 {
+      font-size: clamp(2rem, 4.4vw, 2.85rem);
+      line-height: 1.12;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+    }
+    h2 {
+      font-size: clamp(1.45rem, 2.5vw, 1.85rem);
+      line-height: 1.2;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin: 0 0 16px;
+    }
+    h3 { font-size: 1.02rem; font-weight: 500; margin: 0 0 8px; letter-spacing: -0.01em; }
+    p { margin: 0 0 14px; }
+    .lead { font-size: 1.125rem; line-height: 1.55; color: var(--ink-2); max-width: 40rem; }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) 48px minmax(0, 0.95fr);
+      align-items: start;
+    }
+    .hero-grid > :nth-child(1) { grid-column: 1; }
+    .hero-grid > :nth-child(2) { grid-column: 3; }
+    .actions { display: flex; flex-wrap: wrap; margin: 22px 0 18px; }
+    .actions > * { margin: 0 10px 10px 0; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 16px;
+      border: 1px solid var(--ink);
+      background: transparent;
+      color: var(--ink);
+      text-decoration: none;
+      font-family: var(--sans);
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .btn:hover { background: #e8e4da; }
+    .btn-primary { background: var(--brand); }
+    .btn-primary:hover { background: var(--brand-hover); }
+    .stats { margin: 0; padding: 0; border-top: 1px solid var(--ink); }
+    .stats div { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .stats dt {
+      font-family: var(--mono);
+      font-size: 1.35rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    .stats dd { margin: 2px 0 0; color: var(--ink-2); font-size: 0.95rem; }
+    .stats dd::before { content: "— "; color: var(--ink-3); }
+
+    figure { margin: 0; }
+    figcaption, .legend, .hint, .disclaimer, .formula, .caption {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--ink-3);
+    }
+    figcaption { margin-top: 8px; }
+    .legend { margin: 6px 0 -6px; display: flex; flex-wrap: wrap; align-items: center; }
+    .legend > * { margin: 0 10px 6px 0; }
+    .legend i {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 5px;
+      vertical-align: -1px;
+    }
+    .sw-green { background: var(--green); }
+    .sw-amber { background: var(--amber); }
+    .sw-red { background: var(--red); }
+    #demo-legend .sw-bus {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: transparent;
+      box-sizing: border-box;
+      border: 1.5px solid var(--ink);
+    }
+    #demo-legend .sw-green,
+    #demo-legend .sw-amber,
+    #demo-legend .sw-red,
+    #demo-legend .sw-out,
+    #demo-legend .sw-off {
+      width: 18px;
+      height: 0;
+      background: none;
+      border-top-width: 2px;
+      border-top-style: dashed;
+      vertical-align: 3px;
+    }
+    #demo-legend .sw-green { border-top-color: #1f8a4c; }
+    #demo-legend .sw-amber { border-top-color: #c98a0b; }
+    #demo-legend .sw-red { border-top-color: #c8321e; }
+    #demo-legend .sw-out {
+      width: 22px;
+      border-top-style: dotted;
+      border-top-color: #a39e93;
+    }
+    #demo-legend .sw-off {
+      width: 22px;
+      border-top-style: solid;
+      border-top-color: #8a8478;
+    }
+    .policy-caption {
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--ink);
+      margin: 12px 0 0;
+      max-width: 46rem;
+    }
+    .scoreboard {
+      margin-top: 16px;
+      border-top: 1px solid var(--ink);
+    }
+    .scoreboard table { width: 100%; border-collapse: collapse; }
+    .scoreboard th,
+    .scoreboard td {
+      font-family: var(--mono);
+      font-weight: 400;
+      font-size: 13px;
+      text-align: left;
+      padding: 8px 16px 8px 0;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: baseline;
+    }
+    .scoreboard thead th {
+      font-size: 12px;
+      color: var(--ink-3);
+      padding-top: 10px;
+    }
+    .scoreboard td {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      width: 8rem;
+    }
+    .scoreboard td.is-better { color: #1eb888; font-weight: 500; }
+    .diagram-scroll { overflow-x: auto; max-width: 100%; overscroll-behavior-x: contain; }
+    .grid-svg { width: 100%; max-width: none; height: auto; display: block; }
+    .grid-svg text { font-family: var(--mono); fill: var(--ink); }
+    .bus-id { font-size: 15px; }
+    .bus-mw { font-size: 12px; fill: var(--ink-2); }
+    .bus circle { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+    .conductor { fill: none; stroke-linecap: butt; transition: stroke 0.4s linear, stroke-width 0.4s linear; }
+    .conductor.live {
+      stroke-dasharray: 9 12;
+      animation: flow var(--dur, 1.5s) linear infinite;
+      animation-direction: var(--dir, normal);
+    }
+    .blade-pivot { transition: transform 0.18s ease; transform-box: fill-box; transform-origin: 0 0; }
+    .blade-pivot.open { transform: rotate(-36deg); }
+    .scroll-hint { display: none; margin-top: 4px; }
+
+    @keyframes flow { to { stroke-dashoffset: -42; } }
+
+    section { padding: 76px 0 8px; scroll-margin-top: 76px; }
+    .section-rule {
+      border-top: 1px solid var(--ink);
+      padding-top: 10px;
+      margin-bottom: 18px;
+    }
+    .prose { max-width: 42rem; }
+    .triad {
+      display: grid;
+      grid-template-columns:
+        minmax(0, 1fr) 28px
+        minmax(0, 1fr) 28px
+        minmax(0, 1fr) 28px
+        minmax(0, 1fr) 28px
+        minmax(0, 1fr);
+      margin-top: 28px;
+      border-top: 1px solid var(--rule);
+      padding-top: 22px;
+    }
+    .triad > :nth-child(1) { grid-column: 1; }
+    .triad > :nth-child(2) { grid-column: 3; }
+    .triad > :nth-child(3) { grid-column: 5; }
+    .triad > :nth-child(4) { grid-column: 7; }
+    .triad > :nth-child(5) { grid-column: 9; }
+    .triad p, .points p, .founder p { color: var(--ink-2); }
+
+    .method {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      margin: 28px 0 0;
+      padding: 0;
+    }
+    .method li { border-top: 1px solid var(--ink); padding: 12px 18px 0 0; }
+    .step-no {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-3);
+      display: block;
+      margin-bottom: 6px;
+    }
+    .step-title { display: block; font-weight: 500; margin-bottom: 4px; }
+    .step-text { display: block; color: var(--ink-2); font-size: 0.92rem; }
+    .flow-head { margin-top: 56px; }
+    .flow {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin: 8px 0 0;
+      padding: 0;
+    }
+    .flow li {
+      position: relative;
+      border-top: 1px solid var(--ink);
+      padding: 12px 28px 0 0;
+      min-width: 0;
+    }
+    .flow li:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: 8px;
+      top: 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink-3);
+    }
+    .flow-note { margin: 18px 0 8px; max-width: 42rem; color: var(--ink-2); }
+    .loop-arrow { width: 100%; height: 42px; display: block; margin: 8px 0 22px; }
+    .formula {
+      color: var(--ink);
+      font-size: 13.5px;
+      line-height: 1.55;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      padding: 12px 0;
+      max-width: 46rem;
+    }
+
+    .disclaimer {
+      color: var(--ink-2);
+      border-left: 1px solid var(--ink);
+      padding-left: 12px;
+      margin: 0 0 8px;
+      max-width: 46rem;
+    }
+    .hint { margin: 8px 0 0; max-width: 46rem; }
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
+      margin: 22px 0 12px;
+    }
+    .controls > .presets { grid-column: 1 / -1; grid-row: 1; }
+    .controls > :nth-child(2) { grid-column: 1; grid-row: 2; }
+    .controls > :nth-child(3) { grid-column: 3; grid-row: 2; }
+    .controls > :nth-child(4) { grid-column: 1; grid-row: 3; margin-top: 8px; }
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      min-width: 0;
+      margin: 0 0 2px;
+    }
+    .preset {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      max-width: 100%;
+      min-height: 44px;
+      margin: 0 8px 8px 0;
+      padding: 6px 12px;
+      border: 1px solid var(--ink);
+      background: transparent;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.25;
+      text-align: left;
+      cursor: pointer;
+    }
+    .preset-name { display: block; }
+    .preset-hint {
+      display: block;
+      margin-top: 1px;
+      font-size: 11px;
+      color: var(--ink-3);
+    }
+    .preset:hover { background: #e8e4da; }
+    .preset[aria-pressed="true"] { background: var(--brand); color: var(--ink); }
+    .preset[aria-pressed="true"] .preset-hint { color: var(--ink); }
+    .preset[aria-pressed="true"]:hover { background: var(--brand-hover); }
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    .control-label > :last-child { margin-left: 12px; }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 44px;
+      background: transparent;
+      margin: 0;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 2px;
+      background: linear-gradient(90deg, var(--brand) var(--p, 50%), var(--track) var(--p, 50%));
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box;
+      width: 22px;
+      height: 22px;
+      margin-top: -10px;
+      border-radius: 50%;
+      background: var(--brand);
+      border: 2px solid var(--ink);
+    }
+    input[type="range"]::-moz-range-track {
+      height: 2px;
+      background: var(--track);
+      border: none;
+    }
+    input[type="range"]::-moz-range-progress {
+      height: 2px;
+      background: var(--brand);
+    }
+    input[type="range"]::-moz-range-thumb {
+      box-sizing: border-box;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--brand);
+      border: 2px solid var(--ink);
+    }
+    select {
+      appearance: none;
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--ink);
+      background-color: var(--paper);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23161a1e' stroke-width='1.2'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding: 8px 36px 8px 12px;
+      border-radius: 0;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .control-actions {
+      grid-column: 1 / -1;
+      grid-row: 4;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      margin: 14px 0 -12px;
+    }
+    .control-actions > * { margin: 0 12px 12px 0; }
+    .toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid var(--ink);
+      min-width: min(100%, 320px);
+      flex: 1;
+    }
+    .toggle button {
+      background: transparent;
+      border: none;
+      min-height: 44px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .toggle button + button { border-left: 1px solid var(--ink); }
+    .toggle button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+    .toggle button.is-policy[aria-pressed="true"] { background: var(--brand); color: var(--ink); }
+
+    .counters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--ink);
+      margin-top: 18px;
+    }
+    .counter { padding: 12px 16px 14px 0; }
+    .counter + .counter { border-left: 1px solid var(--rule); padding-left: 16px; }
+    .counter b {
+      display: block;
+      font-family: var(--mono);
+      font-weight: 500;
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+    }
+    .counter span {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-3);
+      letter-spacing: 0.01em;
+    }
+    .status {
+      font-family: var(--mono);
+      font-size: 14px;
+      margin: 16px 0 0;
+    }
+    .log-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-3);
+      margin: 22px 0 0;
+    }
+    .log { list-style: none; margin: 0; padding: 0; }
+    .log li {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.45;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .log .empty { color: var(--ink-3); border-bottom: none; }
+    .key { margin-top: 6px; }
+
+    .listing { border-top: 1px solid var(--ink); margin-top: 22px; }
+    .listing-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) 28px minmax(0, 0.9fr);
+      align-items: baseline;
+      border-bottom: 1px solid var(--rule);
+      padding: 8px 0;
+    }
+    .listing-row > :nth-child(1) { grid-column: 1; }
+    .listing-row > :nth-child(2) { grid-column: 3; }
+    .listing-row code {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.45;
+      display: block;
+      overflow-wrap: break-word;
+    }
+    .listing-row p { margin: 0; font-size: 14px; color: var(--ink-2); }
+    .ind1 { padding-left: 1.15em; }
+    .ind2 { padding-left: 2.3em; }
+    .ind3 { padding-left: 3.45em; }
+    .ind4 { padding-left: 4.6em; }
+
+    .chart { width: 100%; height: auto; display: block; min-width: 760px; max-width: none; }
+    .chart text { font-family: var(--mono); fill: var(--ink); font-size: 13px; }
+    .chart .tick { fill: var(--ink-3); font-size: 12px; }
+    .diff-chart { width: 100%; max-width: 560px; height: auto; display: block; margin-top: 16px; }
+    .diff-chart text { font-family: var(--mono); fill: var(--ink); }
+    .bench { max-width: 46rem; margin: 0 0 28px; }
+    .bench h3 { margin-top: 4px; }
+    .baselines {
+      list-style: none;
+      margin: 4px 0 0;
+      padding: 0;
+    }
+    .baselines li {
+      border-top: 1px solid var(--rule);
+      padding: 8px 0;
+      color: var(--ink-2);
+    }
+    .baselines strong { font-weight: 500; color: var(--ink); }
+    .limits {
+      border: 1px solid var(--ink);
+      padding: 14px 16px 4px;
+      margin: 22px 0 0;
+      max-width: 46rem;
+    }
+    .limits ul { margin: 0 0 10px; padding-left: 18px; color: var(--ink-2); }
+    .limits li { margin: 8px 0; }
+    .proto {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--ink-2);
+      margin: 12px 0 0;
+    }
+    .demo-role {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--ink);
+      margin: 0 0 8px;
+      max-width: 46rem;
+    }
+    .try-line { margin: 0 0 8px; max-width: 46rem; color: var(--ink-2); }
+    .prose, .bench, .notes, .limits, .try-line { overflow-wrap: break-word; }
+    .notes { margin-top: 8px; max-width: 44rem; }
+    .notes p { color: var(--ink-2); }
+
+    .points {
+      list-style: none;
+      margin: 28px 0 0;
+      padding: 22px 0 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr);
+      border-top: 1px solid var(--rule);
+    }
+    .points > :nth-child(odd) { grid-column: 1; }
+    .points > :nth-child(even) { grid-column: 3; }
+    .points > :nth-child(n + 3) { margin-top: 28px; }
+    .points .idx {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-3);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .roadmap { list-style: none; margin: 28px 0 0; padding: 0; max-width: 40rem; }
+    .roadmap li {
+      display: grid;
+      grid-template-columns: 110px 18px minmax(0, 1fr);
+      border-top: 1px solid var(--rule);
+      padding: 16px 0;
+    }
+    .roadmap li > :nth-child(1) { grid-column: 1; }
+    .roadmap li > :nth-child(2) { grid-column: 3; }
+    .when { font-family: var(--mono); font-size: 13px; }
+    .tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-left: 8px;
+    }
+    .roadmap p { margin: 0; }
+
+    .stair {
+      list-style: none;
+      margin: 28px 0 0;
+      padding: 0;
+      max-width: 48rem;
+    }
+    .stair li {
+      display: grid;
+      grid-template-columns: 7.75rem 18px minmax(0, 1fr);
+      align-items: start;
+      border-top: 1px solid var(--ink);
+      padding: 14px 0 16px;
+    }
+    .stair li > :nth-child(1) { grid-column: 1; }
+    .stair li > :nth-child(2) { grid-column: 3; }
+    .stair li:nth-child(2) { margin-left: 1.35rem; }
+    .stair li:nth-child(3) { margin-left: 2.7rem; }
+    .stair li:nth-child(4) { margin-left: 4.05rem; }
+    .stair p { margin: 0; color: var(--ink-2); }
+    .stag {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      line-height: 1.3;
+      display: inline-block;
+      padding: 4px 8px;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    .stag-measured {
+      background: #1eb888;
+      border-color: #1eb888;
+      color: var(--ink);
+    }
+
+    .founder {
+      display: grid;
+      grid-template-columns: 220px 32px minmax(0, 1fr);
+      align-items: start;
+      margin-top: 8px;
+    }
+    .founder > :nth-child(1) { grid-column: 1; }
+    .founder > :nth-child(2) { grid-column: 3; }
+    .portrait {
+      width: 220px;
+      height: auto;
+      display: block;
+      background: #d9d4ca;
+    }
+    .contact-list { margin: 8px 0 18px; padding-left: 18px; color: var(--ink-2); }
+    .contact-list li { margin: 6px 0; }
+    .mail { font-family: var(--mono); font-size: 15px; }
+
+    footer { border-top: 1px solid var(--ink); margin-top: 72px; padding: 22px 0 48px; }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; margin-bottom: -12px; }
+    .footer-inner > * { margin: 0 24px 12px 0; }
+    .footer-inner > .footer-nav { margin: 0 -14px 4px 0; }
+    footer p { margin: 0; font-family: var(--mono); font-size: 13px; }
+    .footer-nav { display: flex; flex-wrap: wrap; }
+    .footer-nav a { font-family: var(--mono); font-size: 12px; text-decoration: none; margin: 0 14px 8px 0; }
+    .footer-nav a:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink); }
+
+    .hero-grid > *,
+    .triad > *,
+    .points > *,
+    .founder > *,
+    .listing-row > *,
+    .stair > *,
+    figure { min-width: 0; }
+    @media (max-width: 1100px) {
+      .triad { grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); }
+      .triad > :nth-child(1) { grid-column: 1; grid-row: 1; margin-top: 0; }
+      .triad > :nth-child(2) { grid-column: 3; grid-row: 1; margin-top: 0; }
+      .triad > :nth-child(3) { grid-column: 1; grid-row: 2; margin-top: 22px; }
+      .triad > :nth-child(4) { grid-column: 3; grid-row: 2; margin-top: 22px; }
+      .triad > :nth-child(5) { grid-column: 1; grid-row: 3; margin-top: 22px; }
+    }
+    @media (max-width: 860px) {
+      .hero-grid, .triad, .method, .flow, .points, .founder, .listing-row { grid-template-columns: minmax(0, 1fr); }
+      .method li, .flow li { padding-right: 0; }
+      .flow li:not(:last-child)::after { content: none; }
+      .hero-grid > :nth-child(n),
+      .triad > :nth-child(n),
+      .points > :nth-child(n),
+      .founder > :nth-child(n),
+      .listing-row > :nth-child(n) { grid-column: 1; grid-row: auto; }
+      .hero-grid > :nth-child(2) { margin-top: 48px; }
+      .listing-row > :nth-child(2) { margin-top: 28px; }
+      .founder > :nth-child(2) { margin-top: 16px; }
+      .points > :nth-child(n) { margin-top: 28px; }
+      .points > :nth-child(1) { margin-top: 0; }
+      .triad > :nth-child(n) { margin-top: 22px; }
+      .triad > :nth-child(1) { margin-top: 0; }
+      .loop-arrow { display: none; }
+      .portrait { width: min(220px, 60%); }
+      .nav { justify-content: flex-start; }
+      .grid-svg { min-width: 560px; }
+    }
+    @media (max-width: 700px) {
+      body { font-size: 16px; }
+      .wrap { width: min(var(--wrap), calc(100% - 28px)); }
+      .hero { padding-top: 36px; }
+      section { padding-top: 56px; scroll-margin-top: 120px; }
+      .controls { grid-template-columns: minmax(0, 1fr); }
+      .controls > :nth-child(n) { grid-column: 1; grid-row: auto; margin-top: 8px; }
+      .controls > :nth-child(1) { margin-top: 0; }
+      .controls > .control-actions { margin-top: 14px; }
+      .counters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .scoreboard th, .scoreboard td { padding-right: 8px; font-size: 12px; }
+      .scoreboard td { width: auto; }
+      .counter:nth-child(odd) { border-left: none; padding-left: 0; }
+      .counter:nth-child(even) { border-left: 1px solid var(--rule); }
+      .counter:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+      .control-actions .btn { flex: 1; }
+      .scroll-hint { display: block; }
+      .roadmap li { grid-template-columns: minmax(0, 1fr); }
+      .roadmap li > :nth-child(n) { grid-column: 1; grid-row: auto; }
+      .roadmap li > :nth-child(2) { margin-top: 4px; }
+      .stair li:nth-child(n) {
+        margin-left: 0;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .stair li > :nth-child(n) { grid-column: 1; grid-row: auto; }
+      .stair li > :nth-child(2) { margin-top: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .conductor, .blade-pivot, .conductor.live { transition: none; animation: none; }
+    }
+  </style>
+</head>
+<body id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <header>
+    <div class="wrap header-inner">
+      <a class="logo" href="#top">
+        <span class="mark" aria-hidden="true"></span>
+        <span data-brand>GridPolicy</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#problem">01 Problem</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="#method">02 Method</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="#from-rules">03 From rules</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="#demo">04 Demo</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="#policy">05 Policy</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="#results">06 Results</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="#tsos">07 For TSOs</a>
+        <span class="sep" aria-hidden="true">·</span>
+        <a href="#contact">10 Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap hero">
+      <div class="hero-grid">
+        <div>
+          <div class="mint-rule" aria-hidden="true"></div>
+          <p class="eyebrow">For transmission system operators</p>
+          <h1>Readable, tested rules for congestion, learned from your own operators.</h1>
+          <p class="lead">GridPolicy turns your operators' past decisions and your grid simulations into short, tested, readable rules, and a playbook for the risks detected in advance.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="#demo">Try the interactive demo</a>
+            <a class="btn" href="#results">See benchmark results</a>
+          </div>
+          <dl class="stats" id="highlights">
+            <div>
+              <dt>13.9 / 28</dt>
+              <dd>days survived, IEEE 14-bus, forced outages</dd>
+            </div>
+            <div>
+              <dt>23.9 %</dt>
+              <dd>of 28-day scenarios fully survived (rule-based baseline 19.2 %, greedy 20.8 %)</dd>
+            </div>
+            <div>
+              <dt>+1.23 d</dt>
+              <dd>vs. hand-written rule-based baseline, 95 % CI +0.39 to +2.12</dd>
+            </div>
+          </dl>
+          <p class="proto">Research prototype, IEEE 14-bus test grid.</p>
+        </div>
+        <figure>
+          <div class="diagram-scroll">
+            <svg id="hero-grid" class="grid-svg" viewBox="0 0 640 410" role="img" aria-labelledby="hero-caption"></svg>
+          </div>
+          <figcaption id="hero-caption">Fig. 0 — Schematic 8-bus grid, DC power flow, demand cycling 100 %</figcaption>
+          <p class="legend">
+            <span><i class="sw-green" aria-hidden="true"></i>Green &lt; 90 %</span>
+            <span aria-hidden="true">·</span>
+            <span><i class="sw-amber" aria-hidden="true"></i>Amber &lt; 100 %</span>
+            <span aria-hidden="true">·</span>
+            <span><i class="sw-red" aria-hidden="true"></i>Red overloaded</span>
+          </p>
+          <p class="scroll-hint caption">The diagram scrolls sideways on a narrow screen.</p>
+        </figure>
+      </div>
+    </div>
+
+    <section id="problem">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">01 Problem</p></div>
+        <h2>Congestion is managed with the most expensive lever.</h2>
+        <div class="triad">
+          <div>
+            <h3>Congestion is rising</h3>
+            <p>Renewable generation often sits far from load, and new lines take years to permit and build. Corridors that already exist carry more power, more often, than they were planned for.</p>
+          </div>
+          <div>
+            <h3>Redispatch</h3>
+            <p>When a corridor is congested, operators pay plants on both sides of the bottleneck to change output. One reduces, another increases, and the flow on the constrained line falls. It works. It is slow to arrange and expensive, and the cost is passed on to consumers through grid fees.</p>
+          </div>
+          <div>
+            <h3>Switching is under-used</h3>
+            <p>Opening one bay and closing another can redirect flow without paying a plant to move. A switching action has to satisfy N-1: the grid must stay safe if any single line fails. Finding such an action in the time an operator has is combinatorially hard — hundreds of substation configurations, each needing a power-flow check and a contingency check. Tools in use either optimize each snapshot from scratch, with nothing an engineer can file and reuse, or train opaque reinforcement-learning agents, as in RTE’s L2RPN competitions.</p>
+          </div>
+          <div>
+            <h3>Building on strong tools</h3>
+            <p>Today's optimizers compute each situation in depth. GridPolicy adds reusable rules engineers can read, file and approve.</p>
+          </div>
+          <div>
+            <h3>Operator experience as an asset</h3>
+            <p>Turn the experience in past operator decisions into tested rules the whole team can reuse.</p>
+          </div>
+        </div>
+        <h2 class="flow-head">Works with your tools and enhances them</h2>
+        <ol class="flow">
+          <li>
+            <span class="step-no">Existing</span>
+            <span class="step-title">Forecasts and security analysis</span>
+          </li>
+          <li>
+            <span class="step-no">Existing</span>
+            <span class="step-title">Remedial-action optimizers</span>
+            <span class="step-text">an in-depth answer per situation</span>
+          </li>
+          <li>
+            <span class="step-no">GridPolicy</span>
+            <span class="step-title">Short, tested, readable rules</span>
+            <span class="step-text">plus a playbook for risks detected in advance</span>
+          </li>
+          <li>
+            <span class="step-no">Operator</span>
+            <span class="step-title">Reads, files, approves and reuses</span>
+          </li>
+        </ol>
+        <p class="flow-note">Two inputs feed GridPolicy: operators' past decisions (recorded remedial actions) and the TSO's own grid simulations (power flow, N-1 analysis).</p>
+        <p class="caption">What it adds: reusable rules engineers can read, file and approve, built from operator experience.</p>
+      </div>
+    </section>
+
+    <section id="method">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">02 Method</p></div>
+        <h2>A search loop over code, scored by physics.</h2>
+        <ol class="method">
+          <li>
+            <span class="step-no">1</span>
+            <span class="step-title">Propose</span>
+            <span class="step-text">a candidate policy, as code</span>
+          </li>
+          <li>
+            <span class="step-no">2</span>
+            <span class="step-title">Simulate</span>
+            <span class="step-text">many scenarios, including line failures</span>
+          </li>
+          <li>
+            <span class="step-no">3</span>
+            <span class="step-title">Score</span>
+            <span class="step-text">with the fitness below</span>
+          </li>
+          <li>
+            <span class="step-no">4</span>
+            <span class="step-title">Keep the best</span>
+            <span class="step-text">as parents of the next generation</span>
+          </li>
+          <li>
+            <span class="step-no">5</span>
+            <span class="step-title">Output</span>
+            <span class="step-text">readable code an engineer can test</span>
+          </li>
+        </ol>
+        <svg class="loop-arrow" viewBox="0 0 1000 42" aria-hidden="true">
+          <path d="M970 12 H28" fill="none" stroke="#161a1e" stroke-width="1"></path>
+          <path d="M28 12 L38 6 M28 12 L38 18" fill="none" stroke="#161a1e" stroke-width="1"></path>
+          <text x="500" y="34" text-anchor="middle" fill="#5c656e" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="13">next generation</text>
+        </svg>
+        <div class="prose">
+          <p>The evolver is not a language model. It uses structured mutation and crossover. It starts from the hand-written rule-based baseline in the same template — act at 95 %, undo below 80 %, redispatch if switching leaves a line above 100 % — and it only tunes thresholds, scoring weights, and which blocks are enabled. A search run is one evolution. The three outage seeds on the test set are three random draws of line outages, not three evolutions.</p>
+          <p>Fitness of a candidate:</p>
+        </div>
+        <p class="formula">100 × survival share − 2 × overload hours − 0.001 × redispatch MWh − 0.01 × ms per step − 2 × N-1 violations per hourly check − 0.5 × switching actions per day.</p>
+        <div class="prose">
+          <p>Survival share is the fraction of the episode before the simulator stops. The other terms penalize residual overload, paid redispatch, slow decisions, N-1 breaches and unnecessary switching. Topology is tried before redispatch because it costs less under this score.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="from-rules">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">03 From rules</p></div>
+        <h2>From rules to a prepared grid.</h2>
+        <ol class="stair">
+          <li>
+            <span class="stag stag-measured">MEASURED</span>
+            <p>Evolved readable congestion rules, scored in a power-flow simulator with outages. <a href="#results">Results</a>.</p>
+          </li>
+          <li>
+            <span class="stag">PILOT</span>
+            <p>Learn from recorded remedial actions (anonymized), test in simulation, improve. Playbook for risks detected in advance: 'if line X trips at peak, do A, then B'.</p>
+          </li>
+          <li>
+            <span class="stag">NEXT</span>
+            <p>Predict which lines are likely to congest and which outages would hurt most, with tested responses prepared for risks detected in advance.</p>
+          </li>
+          <li>
+            <span class="stag">VISION</span>
+            <p>Small, cheap switching in advance to avoid congestion; playbooks checked with neighboring operators; evidence on real bottlenecks for grid planning.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="demo">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">04 Demo</p></div>
+        <h2>Move the load. Watch the policy decide.</h2>
+        <p class="disclaimer">Simplified demo — DC power flow on a schematic 8-bus grid, not real grid data.</p>
+        <p class="demo-role">Illustrative, simplified policy with the same decision order; not the benchmark code.</p>
+        <p class="try-line">Trip a line to simulate an outage, then compare doing nothing with the policy.</p>
+        <div class="controls">
+          <div class="presets" id="presets" role="group" aria-label="Scenario presets">
+            <button type="button" class="preset" data-demand="100" data-threshold="97.4" data-tripped="F-H" aria-pressed="false">
+              <span class="preset-name">Two overloads cleared</span>
+              <span class="preset-hint">Closes E–F</span>
+            </button>
+            <button type="button" class="preset" data-demand="115" data-threshold="97.4" data-tripped="" aria-pressed="false">
+              <span class="preset-name">Open a line</span>
+              <span class="preset-hint">Opens C–D</span>
+            </button>
+            <button type="button" class="preset" data-demand="130" data-threshold="97.4" data-tripped="C-B" aria-pressed="false">
+              <span class="preset-name">Switch, then redispatch</span>
+              <span class="preset-hint">Opens C–D, 29 MW</span>
+            </button>
+          </div>
+          <div>
+            <div class="control-label">
+              <label for="demand">Demand</label>
+              <span id="demand-readout" class="num">100 %</span>
+            </div>
+            <input id="demand" type="range" min="60" max="130" step="1" value="100" aria-valuemin="60" aria-valuemax="130" aria-valuetext="100 percent">
+          </div>
+          <div>
+            <div class="control-label">
+              <label for="threshold">Act when a line exceeds</label>
+              <span id="threshold-readout" class="num">97.4 %</span>
+            </div>
+            <input id="threshold" type="range" min="80" max="130" step="0.1" value="97.4" aria-valuemin="80" aria-valuemax="130" aria-valuetext="97.4 percent">
+          </div>
+          <div>
+            <div class="control-label">
+              <label for="trip">Trip a line (N-1)</label>
+            </div>
+            <select id="trip">
+              <option value="">None</option>
+            </select>
+          </div>
+          <div class="control-actions">
+            <div class="toggle" role="group" aria-label="Policy mode">
+              <button type="button" id="mode-nothing" aria-pressed="false">Do nothing</button>
+              <button type="button" id="mode-policy" class="is-policy" aria-pressed="true">Policy active</button>
+            </div>
+            <button type="button" class="btn" id="reset">Reset</button>
+          </div>
+        </div>
+        <p class="hint" id="demo-note">Toy 8-node illustration of how a rule reacts. Measured results come from the IEEE 14-bus benchmark below.</p>
+        <figure>
+          <div class="diagram-scroll">
+            <svg id="demo-grid" class="grid-svg" viewBox="0 0 640 410" role="img" aria-labelledby="demo-caption policy-caption"></svg>
+          </div>
+          <figcaption id="demo-caption">Fig. 3 — Schematic 8-bus grid, DC power flow. Not a model of any real grid.</figcaption>
+          <p class="legend" id="demo-legend">
+            <span><i class="sw-bus" aria-hidden="true"></i>Circle — substation. MW is generation (+) or load (−).</span>
+            <span><i class="sw-green" aria-hidden="true"></i><i class="sw-amber" aria-hidden="true"></i><i class="sw-red" aria-hidden="true"></i>Dashed line — in service, colored by loading: green below 80 %, orange 80–100 %, red above 100 %.</span>
+            <span><i class="sw-out" aria-hidden="true"></i>Gray dotted line — tripped line (outage).</span>
+            <span><i class="sw-off" aria-hidden="true"></i>Solid gray line with an open breaker — line switched off by the policy.</span>
+          </p>
+          <p class="policy-caption" id="policy-caption" aria-live="polite"></p>
+          <p class="scroll-hint caption">The diagram scrolls sideways on a narrow screen.</p>
+        </figure>
+        <div class="scoreboard">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col">Do nothing</th>
+                <th scope="col">Policy active</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Highest line loading</th>
+                <td id="sb-max-off"></td>
+                <td id="sb-max-on"></td>
+              </tr>
+              <tr>
+                <th scope="row">Overloaded lines</th>
+                <td id="sb-over-off"></td>
+                <td id="sb-over-on"></td>
+              </tr>
+              <tr>
+                <th scope="row">Lines switched</th>
+                <td id="sb-sw-off"></td>
+                <td id="sb-sw-on"></td>
+              </tr>
+              <tr>
+                <th scope="row">Redispatch</th>
+                <td id="sb-rd-off"></td>
+                <td id="sb-rd-on"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="policy">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">05 Policy</p></div>
+        <h2>This is the whole policy.</h2>
+        <div class="prose">
+          <p>Program from search run 0 (the 3 runs evolved different thresholds). It acts above 97.4 %, undoes below 90.8 %, and redispatches only if the best switch still leaves a line above 107 %.</p>
+          <p>On the test set this program survived 14.8 days (53.0 %), +2.12 d versus the rule-based baseline (95 % CI +1.13 to +3.24), +1.06 d versus greedy (95 % CI +0.21 to +1.96), and 0 MWh of redispatch.</p>
+          <p>Evolution moved the rule-based baseline's thresholds from 95 % / 80 % / 100 % to 97.4 % / 90.8 % / 107 %: act later, undo sooner, and almost never pay for redispatch.</p>
+          <p>What follows is the control flow of that program, not a different policy. One action is returned per 5-minute step. The function does not switch and redispatch in the same step.</p>
+        </div>
+        <div class="listing" aria-label="Control flow of the program from search run 0">
+          <div class="listing-row">
+            <code class="ind0">def act(obs):</code>
+            <p>Program from search run 0. The step returns one action.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind1">loading = max_line_loading(obs)</code>
+            <p>Highest line loading on this snapshot.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind1">if loading &lt;= 0.974:</code>
+            <p>At or below 97.4 %, do not switch for congestion.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind2">if a_line_is_tripped(obs):</code>
+            <p>Reconnect a tripped line first.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind3">return reconnect(obs)</code>
+            <p>That reconnect is the only action this step.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind2">if loading &lt; 0.908 and switching_is_active(obs):</code>
+            <p>Below 90.8 %, and a switching intervention is still active.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind3">undone = undo_one_switch(obs)</code>
+            <p>Simulate undoing one switching action.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind3">if max_line_loading(undone) &lt;= 0.974:</code>
+            <p>Undo only if the restored grid stays at or under 97.4 %.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind4">return undone</code>
+            <p>That undo is the action this step. Otherwise it is not applied.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind2">return do_nothing()</code>
+            <p>Nothing to reconnect, or the undo would not stay under 97.4 %.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind1">best = best_of(simulate(a) for a in substation_actions())</code>
+            <p>Above 97.4 %: simulate the 178 single-substation reconfigurations. Each candidate is a power-flow.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind1">if best.max_loading &lt;= 1.07:</code>
+            <p>If the best leaves max loading at or below 107 %, apply that switch.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind2">return best.action</code>
+            <p>The step returns that one switch.</p>
+          </div>
+          <div class="listing-row">
+            <code class="ind1">return better_of(best, best_redispatch(obs))</code>
+            <p>Otherwise compare that best switch with the best redispatch and return whichever scores better. Not both.</p>
+          </div>
+        </div>
+        <div class="prose">
+          <h3>One step an engineer can re-simulate</h3>
+          <p>Line 4–5 reaches 98 %. The policy simulates 178 substation actions, picks a reconfiguration of substation X, and the max loading falls to 91 %. Line 4–5 is the line that crossed the 97.4 % threshold. Each of the 178 candidates is a power-flow. The reconfiguration of substation X is the action that was applied: it was the one those power-flows selected, and the max loading fell to 91 %, which is at or below 107 %, so the step returns that switch and does not also redispatch.</p>
+          <p>The demo above is an illustrative, simplified policy with the same decision order and these thresholds, not the benchmark code, and its numbers are illustrative.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="results">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">06 Results</p></div>
+        <h2>Longer survival than a hand-written rule-based baseline, on par with greedy topology search.</h2>
+        <div class="bench">
+          <h3>How the benchmark was run</h3>
+          <p>The simulator is Grid2Op 1.12.5 with LightSim2Grid, on the IEEE 14-bus grid (l2rpn_case14_sandbox: 20 lines, 6 generators). Each step is 5 minutes.</p>
+          <p>An episode is a 28-day scenario (8,064 steps). It ends early when the simulator declares a blackout. Days survived is the time before that, with a maximum of 28.</p>
+          <p>The stress is random line outages: one of 6 lines, for up to 4 h, at most once per 24 h.</p>
+          <p>Training: each search run evolved its policy on 32 training scenarios (2,500 steps each), with its own outage draws. Test: 40 different scenarios the search never saw, for the full 28 days, with 3 outage seeds. The training and test sets are disjoint.</p>
+          <p>Three independent search runs are three separate evolutions. Three outage seeds are three random outage draws at test time. They are not the same thing. The 13.9 days is the average of the 3 evolved programs, each tested on 40 scenarios × 3 outage seeds (360 paired episodes per comparison).</p>
+          <p>Every agent faces the identical scenario and the identical outage sequence. Differences are paired. The 95 % CI is a cluster bootstrap over scenarios. v1 versus the rule-based baseline: 86 wins, 239 ties, 35 losses out of 360 episodes.</p>
+          <p>Without outages, greedy search and the rule-based baseline already survive all 40 test scenarios, so the outage setting is the main benchmark.</p>
+          <p>The search starts from the hand-written rule-based baseline in the same template: act at 95 %, undo below 80 %, and redispatch if switching leaves a line above 100 %. The evolver is not a language model. It uses structured mutation and crossover, and it only tunes thresholds, scoring weights, and which blocks are enabled.</p>
+          <ul class="baselines">
+            <li><strong>Do nothing.</strong> Never acts.</li>
+            <li><strong>Redispatch only.</strong> Only moves generators.</li>
+            <li><strong>Hand-written rule-based baseline.</strong> A rule-based operator heuristic.</li>
+            <li><strong>Greedy topology search.</strong> At each step where max loading ≥ 95 %, it simulates all 178 single-substation reconfigurations and applies the one with the lowest max loading. It reconnects lines, and it reverts to the reference topology below 80 %. This is greedy search over all 178 switching actions.</li>
+          </ul>
+        </div>
+        <figure>
+          <div class="diagram-scroll">
+            <svg id="chart" class="chart" viewBox="0 0 960 292" role="img" aria-labelledby="chart-caption">
+              <title>Mean days survived out of 28</title>
+              <line id="chart-axis-y" x1="510" y1="16" x2="510" y2="246" stroke="#161a1e" stroke-width="1"></line>
+              <line id="chart-axis-x" x1="510" y1="246" x2="920" y2="246" stroke="#161a1e" stroke-width="1"></line>
+              <line id="chart-grid-7" x1="612.5" y1="16" x2="612.5" y2="246" stroke="#d9d4c8" stroke-width="1"></line>
+              <line id="chart-grid-14" x1="715" y1="16" x2="715" y2="246" stroke="#d9d4c8" stroke-width="1"></line>
+              <line id="chart-grid-21" x1="817.5" y1="16" x2="817.5" y2="246" stroke="#d9d4c8" stroke-width="1"></line>
+              <line id="chart-grid-28" x1="920" y1="16" x2="920" y2="246" stroke="#d9d4c8" stroke-width="1"></line>
+              <text id="chart-lab-0" x="360" y="38" text-anchor="end">Do nothing</text>
+              <text id="chart-val-0" x="376" y="38">1.5 (5.5 %)</text>
+              <rect id="chart-bar-0" x="510" y="20" width="21.96" height="26" fill="#c4bfb4" stroke="#161a1e" stroke-width="1"></rect>
+              <text id="chart-lab-1" x="360" y="84" text-anchor="end">Redispatch only</text>
+              <text id="chart-val-1" x="376" y="84">4.4 (15.6 %)</text>
+              <rect id="chart-bar-1" x="510" y="66" width="64.43" height="26" fill="#c4bfb4" stroke="#161a1e" stroke-width="1"></rect>
+              <text id="chart-lab-2" x="360" y="130" text-anchor="end">Hand-written rule-based baseline</text>
+              <text id="chart-val-2" x="376" y="130">12.7 (45.4 %)</text>
+              <rect id="chart-bar-2" x="510" y="112" width="185.96" height="26" fill="#c4bfb4" stroke="#161a1e" stroke-width="1"></rect>
+              <text id="chart-lab-3" x="360" y="176" text-anchor="end">Greedy topology search</text>
+              <text id="chart-val-3" x="376" y="176">13.8 (49.2 %)</text>
+              <rect id="chart-bar-3" x="510" y="158" width="202.07" height="26" fill="#c4bfb4" stroke="#161a1e" stroke-width="1"></rect>
+              <text id="chart-lab-4" x="360" y="222" text-anchor="end">GridPolicy v1</text>
+              <text id="chart-val-4" x="376" y="222">13.9 (49.8 %)</text>
+              <rect id="chart-bar-4" x="510" y="204" width="203.54" height="26" fill="#1eb888" stroke="#161a1e" stroke-width="1"></rect>
+              <text class="tick" id="chart-tick-0" x="510" y="268" text-anchor="middle">0</text>
+              <text class="tick" id="chart-tick-7" x="612.5" y="268" text-anchor="middle">7</text>
+              <text class="tick" id="chart-tick-14" x="715" y="268" text-anchor="middle">14</text>
+              <text class="tick" id="chart-tick-21" x="817.5" y="268" text-anchor="middle">21</text>
+              <text class="tick" id="chart-tick-28" x="920" y="268" text-anchor="middle">28</text>
+            </svg>
+          </div>
+          <p class="scroll-hint caption">The chart scrolls sideways on a narrow screen.</p>
+          <svg class="diff-chart" viewBox="0 0 400 236" role="img" aria-labelledby="diff-caption">
+            <title>Paired differences in days survived, with 95 % confidence intervals</title>
+            <text x="0" y="16" font-size="13">Paired difference, days survived</text>
+            <line x1="122.9" y1="70" x2="122.9" y2="196" stroke="#d9d4c8" stroke-width="1"></line>
+            <text x="0" y="46" font-size="14">vs rule-based baseline</text>
+            <text x="396" y="46" font-size="14" text-anchor="end">+1.23 d</text>
+            <text x="0" y="64" font-size="12" fill="#5c656e">95 % CI +0.39 to +2.12</text>
+            <line x1="163" y1="86" x2="340.9" y2="86" stroke="#161a1e" stroke-width="1.6"></line>
+            <line x1="163" y1="79" x2="163" y2="93" stroke="#161a1e" stroke-width="1.6"></line>
+            <line x1="340.9" y1="79" x2="340.9" y2="93" stroke="#161a1e" stroke-width="1.6"></line>
+            <circle cx="249.4" cy="86" r="3.6" fill="#161a1e"></circle>
+            <text x="0" y="132" font-size="14">vs greedy</text>
+            <text x="84" y="132" font-size="14" fill="#d0255a">tie</text>
+            <text x="396" y="132" font-size="14" text-anchor="end">+0.17 d</text>
+            <text x="0" y="150" font-size="12" fill="#5c656e">95 % CI −0.61 to +0.97</text>
+            <line x1="60.1" y1="172" x2="222.6" y2="172" stroke="#d0255a" stroke-width="1.6"></line>
+            <line x1="60.1" y1="165" x2="60.1" y2="179" stroke="#d0255a" stroke-width="1.6"></line>
+            <line x1="222.6" y1="165" x2="222.6" y2="179" stroke="#d0255a" stroke-width="1.6"></line>
+            <circle cx="140.3" cy="172" r="3.6" fill="#d0255a"></circle>
+            <line x1="20" y1="206" x2="380" y2="206" stroke="#161a1e" stroke-width="1"></line>
+            <text x="20" y="226" font-size="12" fill="#5c656e" text-anchor="middle">−1</text>
+            <text x="122.9" y="226" font-size="12" fill="#5c656e" text-anchor="middle">0</text>
+            <text x="225.7" y="226" font-size="12" fill="#5c656e" text-anchor="middle">+1</text>
+            <text x="328.6" y="226" font-size="12" fill="#5c656e" text-anchor="middle">+2</text>
+          </svg>
+          <figcaption id="chart-caption">Fig. 5 — Mean days survived, out of 28. The figure in parentheses is the survival share reported with that mean. The GridPolicy v1 bar is the mean of the 3 search runs on this test. IEEE 14-bus, l2rpn_case14_sandbox, Grid2Op 1.12.5, LightSim2Grid, 40 held-out 28-day scenarios × 3 outage seeds, one of 6 lines tripped for up to 4 h at most once per 24 h.</figcaption>
+          <p class="caption" id="diff-caption">Paired contrasts, on a difference scale in days, not the 0–28 scale of the bars. vs rule-based baseline: +1.23 d, 95 % CI +0.39 to +2.12. vs greedy: +0.17 d, 95 % CI −0.61 to +0.97. The greedy interval crosses zero and is marked as a tie. The five bars have no whiskers.</p>
+        </figure>
+        <div class="notes">
+          <p>Redispatch for the pooled v1 result is 1.9 MWh/day. Each search run took 34–44 min on 7 cores.</p>
+        </div>
+        <div class="limits">
+          <h3>Limitations</h3>
+          <ul>
+            <li>14-bus test grid, synthetic outages, no TSO data.</li>
+            <li>Tie with greedy search. One of the three evolved programs is significantly worse than greedy (−1.49 d, 95 % CI −2.70 to −0.36).</li>
+            <li>The N-1 penalty did not reduce N-1 violations: 6.82 per hourly check, versus 6.78 for greedy and 6.71 for the rule-based baseline.</li>
+            <li>Slightly slower decisions: 264 ms versus 223 ms for greedy, per triggered step.</li>
+            <li>No language model was used in this run.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="tsos">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">07 For TSOs</p></div>
+        <h2>Built to sit beside the control room, not inside it.</h2>
+        <ol class="points">
+          <li>
+            <span class="idx">01</span>
+            <h3>Vendor-independent</h3>
+            <p>The search needs a <span class="num">simulate(action)</span> call and a generator of candidate actions. An adapter can target the operator’s own power-flow engine, or a CGMES model through PowSyBl.</p>
+          </li>
+          <li>
+            <span class="idx">02</span>
+            <h3>Advisor, not actuator</h3>
+            <p>It proposes a policy for a person to read and approve. It does not switch the grid, and it is not wired into the control system.</p>
+          </li>
+          <li>
+            <span class="idx">03</span>
+            <h3>The operator’s own data</h3>
+            <p>An anonymized grid model, historical snapshots and recorded remedial actions, back-tested against the decisions that were actually taken. The data stays in an environment the TSO controls when that is required.</p>
+          </li>
+          <li>
+            <span class="idx">04</span>
+            <h3>Traceable</h3>
+            <p>Every recommended action points at a line of policy code and at the simulation that scored it. If the line cannot be justified, it does not go forward.</p>
+          </li>
+          <li>
+            <span class="idx">05</span>
+            <h3>Runs where your data is</h3>
+            <p>The search runs offline in an environment the operator controls, can use an open-weight model, and never needs to send grid data out. The rules themselves run in the control room with no AI model, about a quarter of a second per decision. Advisor only, no automatic switching.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">08 Roadmap</p></div>
+        <h2>From a 14-bus benchmark to a shadow-mode advisor.</h2>
+        <ol class="roadmap">
+          <li aria-current="step">
+            <div><span class="when">Q4 2026</span><span class="tag">Next</span></div>
+            <p>Benchmarks at IEEE 118-bus scale; first runs of the language-model-guided search (implemented, not yet run).</p>
+          </li>
+          <li>
+            <div><span class="when">H1 2027</span></div>
+            <p>Pilot with one TSO on anonymized data: learned rules + playbook for risks detected in advance, shadow mode.</p>
+          </li>
+          <li>
+            <div><span class="when">H2 2027</span></div>
+            <p>Congestion-risk prediction, shadow-mode decision support, validation with a second TSO.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="team">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">09 Team</p></div>
+        <h2>Founder</h2>
+        <div class="founder">
+          <img class="portrait" width="280" height="340" alt="Adam Bekkar" src="img/founder.jpg">
+          <div>
+            <h3>Adam Bekkar</h3>
+            <p>I'm studying for an MSc in Computer Science at ETH Zurich, with a major in Machine Intelligence and a minor in Theoretical Computer Science, after a BSc in Computer Science at EPFL. During a summer research internship at EPFL's RS3 Lab, I worked on memory allocation for CXL hardware, which taught me a lot about managing resources efficiently. As President of Students 4 Students (EPFL student association) and IT manager for several student associations, I have built and run networks and applications used by hundreds to thousands of students.</p>
+            <p>More about me: <a href="https://adam.bekkar.ch">adam.bekkar.ch</a></p>
+            <p>GridPolicy would be based in Zurich.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="wrap">
+        <div class="section-rule"><p class="eyebrow">10 Contact</p></div>
+        <h2>Contact</h2>
+        <div class="prose">
+          <p>GridPolicy is being developed as a submission to the Grid Innovation Alliance open call "The Grid at its Limit" (2026). For questions about this submission, please write to:</p>
+          <p><a class="mail" id="email-link" href="mailto:abekkar@student.ethz.ch">abekkar@student.ethz.ch</a></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <p><span data-brand>GridPolicy</span> · Zurich, Switzerland</p>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="#problem">Problem</a>
+        <a href="#method">Method</a>
+        <a href="#from-rules">From rules</a>
+        <a href="#demo">Demo</a>
+        <a href="#policy">Policy</a>
+        <a href="#results">Results</a>
+        <a href="#tsos">For TSOs</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#team">Team</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    /* Numbers, the grid and the company name. Edit here. */
+    const CONFIG = {
+      name: "GridPolicy",
+      email: "abekkar@student.ethz.ch",
+      place: "Zurich, Switzerland",
+      policy: {
+        revertBelowPct: 90.8,
+        redispatchAbovePct: 107,
+        targetBelowPct: 100,
+        minImprovementPp: 2,
+        maxDeviations: 2,
+        stepMw: 10,
+        maxSteps: 40,
+        thresholdDefault: 97.4,
+        thresholdMin: 80,
+        thresholdMax: 130,
+        thresholdStep: 0.1
+      },
+      demo: {
+        demandMin: 60,
+        demandMax: 130,
+        demandStep: 1,
+        demandDefault: 100,
+        trippedDefault: "G-F"
+      },
+      hero: {
+        periodSec: 12,
+        demandMinPct: 75,
+        demandMaxPct: 115
+      },
+      highlights: [
+        { value: "13.9 / 28", note: "days survived, IEEE 14-bus, forced outages" },
+        { value: "23.9 %", note: "of 28-day scenarios fully survived (rule-based baseline 19.2 %, greedy 20.8 %)" },
+        { value: "+1.23 d", note: "vs. hand-written rule-based baseline, 95 % CI +0.39 to +2.12" }
+      ],
+      results: {
+        horizonDays: 28,
+        bars: [
+          { label: "Do nothing", days: 1.5, share: "5.5 %" },
+          { label: "Redispatch only", days: 4.4, share: "15.6 %" },
+          { label: "Hand-written rule-based baseline", days: 12.7, share: "45.4 %" },
+          { label: "Greedy topology search", days: 13.8, share: "49.2 %" },
+          { label: "GridPolicy v1", days: 13.9, share: "49.8 %", accent: true }
+        ]
+      },
+      grid: {
+        buses: [
+          { id: "A", x: 80, y: 90, role: "slack", sched: 100, max: 220, labelDx: 0, labelDy: -34 },
+          { id: "B", x: 560, y: 90, role: "gen", sched: 45, max: 120, labelDx: 0, labelDy: -34 },
+          { id: "C", x: 320, y: 70, role: "load", base: 30, labelDx: 0, labelDy: 40 },
+          { id: "D", x: 200, y: 210, role: "load", base: 50, labelDx: -36, labelDy: 4 },
+          { id: "E", x: 440, y: 210, role: "load", base: 35, labelDx: 36, labelDy: 4 },
+          { id: "F", x: 320, y: 350, role: "gen", sched: 60, max: 120, labelDx: 0, labelDy: 40 },
+          { id: "G", x: 120, y: 330, role: "load", base: 40, labelDx: -38, labelDy: 4 },
+          { id: "H", x: 520, y: 330, role: "load", base: 50, labelDx: 38, labelDy: 4 }
+        ],
+        lines: [
+          { id: "A-C", a: "A", b: "C", x: 0.6, limit: 60, switchable: false, normalClosed: true },
+          { id: "C-B", a: "C", b: "B", x: 0.8, limit: 70, switchable: false, normalClosed: true },
+          { id: "A-D", a: "A", b: "D", x: 1.0, limit: 90, switchable: false, normalClosed: true },
+          { id: "B-E", a: "B", b: "E", x: 1.5, limit: 50, switchable: false, normalClosed: true },
+          { id: "C-D", a: "C", b: "D", x: 1.2, limit: 55, switchable: true, normalClosed: true },
+          { id: "C-E", a: "C", b: "E", x: 0.8, limit: 45, switchable: true, normalClosed: true },
+          { id: "D-E", a: "D", b: "E", x: 0.6, limit: 60, switchable: true, normalClosed: false, tie: true },
+          { id: "D-G", a: "D", b: "G", x: 0.8, limit: 55, switchable: false, normalClosed: true },
+          { id: "E-H", a: "E", b: "H", x: 0.6, limit: 55, switchable: false, normalClosed: true },
+          { id: "G-F", a: "G", b: "F", x: 1.0, limit: 60, switchable: false, normalClosed: true },
+          { id: "F-H", a: "F", b: "H", x: 0.8, limit: 55, switchable: false, normalClosed: true },
+          { id: "E-F", a: "E", b: "F", x: 1.2, limit: 35, switchable: true, normalClosed: false, tie: true }
+        ]
+      }
+    };
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    function busById(id) {
+      return CONFIG.grid.buses.find((b) => b.id === id);
+    }
+
+    function switchableLines() {
+      return CONFIG.grid.lines.filter((l) => l.switchable);
+    }
+
+    function lineName(id) {
+      return id.replace(/-/g, "\u2013");
+    }
+
+    function fmtMw(v) {
+      if (!Number.isFinite(v)) return "—";
+      const n = Math.round(v * 10) / 10;
+      if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
+      return n.toFixed(1);
+    }
+
+    /* Base-case load and non-slack generation, used so the slack bus balances. */
+    function baseBalance() {
+      let load = 0;
+      let gen = 0;
+      for (const bus of CONFIG.grid.buses) {
+        if (bus.role === "load") load += bus.base;
+        if (bus.role === "gen") gen += bus.sched;
+      }
+      return { load, gen };
+    }
+
+    function scheduledSlack(demandPct) {
+      const { load, gen } = baseBalance();
+      return load * (demandPct / 100) - gen;
+    }
+
+    /*
+     * DC power flow. Susceptance b = 1/x. Slack angle is fixed at 0.
+     * P = B θ on the remaining buses, solved by Gaussian elimination.
+     * Flow on a line is (θa − θb) / x. A disconnected bus is rejected.
+     */
+    function solve(demandPct, genB, genF, closed) {
+      const buses = CONFIG.grid.buses;
+      const n = buses.length;
+      const index = {};
+      buses.forEach((b, i) => { index[b.id] = i; });
+      const B = Array.from({ length: n }, () => Array(n).fill(0));
+      for (const line of CONFIG.grid.lines) {
+        if (!closed.has(line.id)) continue;
+        const i = index[line.a];
+        const j = index[line.b];
+        const b = 1 / line.x;
+        B[i][i] += b;
+        B[j][j] += b;
+        B[i][j] -= b;
+        B[j][i] -= b;
+      }
+      const scale = demandPct / 100;
+      const P = Array(n).fill(0);
+      for (const bus of buses) {
+        const i = index[bus.id];
+        if (bus.role === "load") P[i] = -bus.base * scale;
+        else if (bus.id === "B") P[i] = genB;
+        else if (bus.id === "F") P[i] = genF;
+      }
+      let rest = 0;
+      for (let i = 1; i < n; i++) rest += P[i];
+      P[0] = -rest;
+
+      if (!isConnected(closed)) return { ok: false, reason: "island" };
+
+      const ids = [1, 2, 3, 4, 5, 6, 7];
+      const m = ids.length;
+      const M = ids.map((r) => [...ids.map((c) => B[r][c]), P[r]]);
+      for (let col = 0; col < m; col++) {
+        let piv = col;
+        for (let r = col + 1; r < m; r++) {
+          if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+        }
+        if (Math.abs(M[piv][col]) < 1e-10) return { ok: false, reason: "singular" };
+        if (piv !== col) {
+          const tmp = M[col];
+          M[col] = M[piv];
+          M[piv] = tmp;
+        }
+        const div = M[col][col];
+        for (let c = col; c <= m; c++) M[col][c] /= div;
+        for (let r = 0; r < m; r++) {
+          if (r === col) continue;
+          const f = M[r][col];
+          for (let c = col; c <= m; c++) M[r][c] -= f * M[col][c];
+        }
+      }
+      const theta = Array(n).fill(0);
+      ids.forEach((id, r) => { theta[id] = M[r][m]; });
+
+      const flows = {};
+      let max = 0;
+      let worst = null;
+      let nOver = 0;
+      for (const line of CONFIG.grid.lines) {
+        if (!closed.has(line.id)) {
+          flows[line.id] = { flow: 0, loading: 0, inService: false };
+          continue;
+        }
+        const flow = (theta[index[line.a]] - theta[index[line.b]]) / line.x;
+        const loading = Math.abs(flow) / line.limit;
+        flows[line.id] = { flow, loading, inService: true };
+        if (loading > max) {
+          max = loading;
+          worst = line.id;
+        }
+        if (loading > 1 + 1e-9) nOver++;
+      }
+      return {
+        ok: true,
+        max,
+        worst,
+        nOver,
+        flows,
+        theta,
+        genA: P[0],
+        genB,
+        genF
+      };
+    }
+
+    function isConnected(closed) {
+      const adj = {};
+      for (const bus of CONFIG.grid.buses) adj[bus.id] = [];
+      for (const line of CONFIG.grid.lines) {
+        if (!closed.has(line.id)) continue;
+        adj[line.a].push(line.b);
+        adj[line.b].push(line.a);
+      }
+      const seen = new Set();
+      const stack = [CONFIG.grid.buses[0].id];
+      seen.add(stack[0]);
+      while (stack.length) {
+        const u = stack.pop();
+        for (const v of adj[u]) {
+          if (!seen.has(v)) {
+            seen.add(v);
+            stack.push(v);
+          }
+        }
+      }
+      return seen.size === CONFIG.grid.buses.length;
+    }
+
+    function closedSet(sw, tripped) {
+      const closed = new Set();
+      for (const line of CONFIG.grid.lines) {
+        if (line.id === tripped) continue;
+        if (line.switchable) {
+          if (sw[line.id]) closed.add(line.id);
+        } else {
+          closed.add(line.id);
+        }
+      }
+      return closed;
+    }
+
+    function canTrip(sw, lineId) {
+      const closed = closedSet(sw, null);
+      closed.delete(lineId);
+      return isConnected(closed);
+    }
+
+    function freshState() {
+      const sw = {};
+      for (const line of CONFIG.grid.lines) {
+        if (line.switchable) sw[line.id] = line.normalClosed;
+      }
+      return {
+        sw,
+        genB: busById("B").sched,
+        genF: busById("F").sched
+      };
+    }
+
+    function deviationCount(sw, tripped) {
+      return switchableLines().filter((l) => l.id !== tripped && sw[l.id] !== l.normalClosed).length;
+    }
+
+    function redispatchMw(genA, genB, genF, demandPct) {
+      const dA = genA - scheduledSlack(demandPct);
+      const dB = genB - busById("B").sched;
+      const dF = genF - busById("F").sched;
+      return 0.5 * (Math.abs(dA) + Math.abs(dB) + Math.abs(dF));
+    }
+
+    function pctText(fraction) {
+      let v = Math.round(fraction * 1000) / 10;
+      if (fraction > 1 + 1e-9 && v <= 100) v = Math.ceil(fraction * 1000) / 10;
+      if (fraction < 1 - 1e-9 && v >= 100) v = Math.floor(fraction * 1000) / 10;
+      if (Math.abs(v - Math.round(v)) < 0.05) return Math.round(v) + " %";
+      return v.toFixed(1) + " %";
+    }
+
+    function fmtRd(v) {
+      if (!Number.isFinite(v) || v < 0.05) return "0";
+      const n = Math.round(v * 10) / 10;
+      if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
+      return n.toFixed(1);
+    }
+
+    function copySw(sw) {
+      return Object.assign({}, sw);
+    }
+
+    /*
+     * One-shot policy for the current demand, threshold, and tripped line.
+     * Bus splits are not in this topology model, so the only switching actions
+     * are opening one in-service line or closing one open line.
+     * A tripped line is an outage, not an action the policy can take.
+     * Redispatch is a 1 MW search on generator setpoints. DC flow is linear,
+     * so each topology is screened from three power-flow solves.
+     */
+    function applyPolicy(demandPct, thresholdPct, tripped) {
+      const busA = busById("A");
+      const busB = busById("B");
+      const busF = busById("F");
+      const genB0 = busB.sched;
+      const genF0 = busF.sched;
+      const baseSw = freshState().sw;
+      const base = solve(demandPct, genB0, genF0, closedSet(baseSw, tripped));
+
+      function pack(sol, sw, lineId) {
+        return {
+          sol,
+          sw,
+          nSwitch: deviationCount(sw, tripped),
+          rd: sol && sol.ok ? redispatchMw(sol.genA, sol.genB, sol.genF, demandPct) : 0,
+          lineId: lineId || null
+        };
+      }
+
+      const nothing = pack(base, baseSw, null);
+      function idle(caption) {
+        return { nothing, policy: pack(base, copySw(baseSw), null), caption };
+      }
+
+      if (!base.ok) return idle("That outage islands a bus, so it was not applied.");
+      if (!(base.max > thresholdPct / 100 + 1e-9)) {
+        return idle("Max loading is within the set limit, so the policy does not act.");
+      }
+
+      const topologies = [{ sw: baseSw, lineId: null, closed: closedSet(baseSw, tripped) }];
+      for (const line of switchableLines()) {
+        if (line.id === tripped) continue;
+        const sw = copySw(baseSw);
+        sw[line.id] = !baseSw[line.id];
+        const closed = closedSet(sw, tripped);
+        if (!isConnected(closed)) continue;
+        topologies.push({ sw, lineId: line.id, closed });
+      }
+
+      function cleared(row) {
+        return row.max < 1 - 1e-9;
+      }
+
+      function better(a, b) {
+        const aClear = cleared(a);
+        const bClear = cleared(b);
+        if (aClear !== bClear) return aClear;
+        if (aClear) {
+          if (Math.abs(a.rd - b.rd) > 1e-6) return a.rd < b.rd;
+          if (a.max < b.max - 1e-9) return true;
+          if (b.max < a.max - 1e-9) return false;
+          return a.nSwitch < b.nSwitch;
+        }
+        if (a.max < b.max - 1e-9) return true;
+        if (b.max < a.max - 1e-9) return false;
+        if (Math.abs(a.rd - b.rd) > 1e-6) return a.rd < b.rd;
+        return a.nSwitch < b.nSwitch;
+      }
+
+      let best = null;
+      function consider(row) {
+        if (!(row.max < base.max - 1e-9)) return;
+        if (row.nOver > base.nOver) return;
+        if (!best || better(row, best)) best = row;
+      }
+
+      for (const topo of topologies) {
+        if (!topo.lineId) continue;
+        const sol = solve(demandPct, genB0, genF0, topo.closed);
+        if (!sol.ok) continue;
+        consider({
+          max: sol.max,
+          nOver: sol.nOver,
+          rd: redispatchMw(sol.genA, sol.genB, sol.genF, demandPct),
+          nSwitch: 1,
+          sol,
+          sw: topo.sw,
+          lineId: topo.lineId,
+          linear: false
+        });
+      }
+      const switchClears = best && best.max < 1 - 1e-9;
+      const bestSwitch = best;
+
+      if (!switchClears) {
+        for (const topo of topologies) {
+          const sens = flowSens(demandPct, genB0, genF0, topo.closed);
+          if (!sens || !sens.sens) continue;
+          const genA0 = sens.base.genA;
+          for (let b = 0; b <= busB.max; b += 1) {
+            for (let f = 0; f <= busF.max; f += 1) {
+              const db = b - genB0;
+              const df = f - genF0;
+              const genA = genA0 - db - df;
+              if (genA < -1e-6 || genA > busA.max + 1e-6) continue;
+              const met = loadingAt(sens.sens, db, df);
+              const rd = 0.5 * (Math.abs(db + df) + Math.abs(db) + Math.abs(df));
+              consider({
+                max: met.max,
+                nOver: met.nOver,
+                rd,
+                nSwitch: topo.lineId ? 1 : 0,
+                sw: topo.sw,
+                lineId: topo.lineId,
+                genB: b,
+                genF: f,
+                linear: true
+              });
+            }
+          }
+        }
+      }
+
+      if (!best) return idle("No improving action found.");
+
+      let chosen = null;
+      if (best.linear) {
+        const sol = solve(demandPct, best.genB, best.genF, closedSet(best.sw, tripped));
+        const row = pack(sol, best.sw, best.lineId);
+        if (row.sol.ok && row.sol.max < base.max - 1e-9 && row.sol.nOver <= base.nOver) chosen = row;
+      } else {
+        chosen = pack(best.sol, best.sw, best.lineId);
+      }
+      if (!chosen && bestSwitch) chosen = pack(bestSwitch.sol, bestSwitch.sw, bestSwitch.lineId);
+      if (!chosen || !chosen.sol.ok || !(chosen.sol.max < base.max - 1e-9) || chosen.sol.nOver > base.nOver) {
+        return idle("No improving action found.");
+      }
+      /* Keep a switch that already cleared every overload. Do not replace it with redispatch. */
+      if (switchClears && !(chosen.lineId && chosen.rd < 0.05 && chosen.sol.max < 1 - 1e-9)) {
+        chosen = pack(bestSwitch.sol, bestSwitch.sw, bestSwitch.lineId);
+      }
+
+      const before = pctText(base.max);
+      const after = pctText(chosen.sol.max);
+      let caption;
+      if (chosen.lineId && chosen.rd < 0.05) {
+        const verb = chosen.sw[chosen.lineId] ? "closed" : "opened";
+        caption = "Policy " + verb + " line " + lineName(chosen.lineId) + ": max loading " + before + " → " + after + ", 0 MW redispatch.";
+      } else if (chosen.lineId) {
+        const verb = chosen.sw[chosen.lineId] ? "closed" : "opened";
+        caption = "Policy " + verb + " line " + lineName(chosen.lineId) + " and redispatched " + fmtRd(chosen.rd) + " MW: max loading " + before + " → " + after + ".";
+      } else {
+        caption = "Policy redispatched " + fmtRd(chosen.rd) + " MW: max loading " + before + " → " + after + ", 0 lines switched.";
+      }
+      return { nothing, policy: chosen, caption };
+    }
+
+    function flowSens(demandPct, genB, genF, closed) {
+      const base = solve(demandPct, genB, genF, closed);
+      if (!base.ok) return null;
+      const upB = solve(demandPct, genB + 1, genF, closed);
+      const upF = solve(demandPct, genB, genF + 1, closed);
+      if (!upB.ok || !upF.ok) return { base, sens: null };
+      const sens = {};
+      for (const line of CONFIG.grid.lines) {
+        const f0 = base.flows[line.id];
+        if (!f0.inService) continue;
+        sens[line.id] = {
+          flow0: f0.flow,
+          limit: line.limit,
+          db: upB.flows[line.id].flow - f0.flow,
+          df: upF.flows[line.id].flow - f0.flow
+        };
+      }
+      return { base, sens };
+    }
+
+    function loadingAt(sens, db, df) {
+      let max = 0;
+      let nOver = 0;
+      for (const id of Object.keys(sens)) {
+        const s = sens[id];
+        const loading = Math.abs(s.flow0 + db * s.db + df * s.df) / s.limit;
+        if (loading > max) max = loading;
+        if (loading > 1 + 1e-9) nOver++;
+      }
+      return { max, nOver };
+    }
+
+    function loadingColor(loading, demo) {
+      if (demo) {
+        if (loading < 0.8) return "#1f8a4c";
+        if (loading > 1 + 1e-9) return "#c8321e";
+        return "#c98a0b";
+      }
+      if (loading < 0.9) return "#1f8a4c";
+      if (loading < 1) return "#c98a0b";
+      return "#c8321e";
+    }
+
+    globalThis.GridEngine = {
+      CONFIG,
+      solve,
+      applyPolicy,
+      freshState,
+      closedSet,
+      canTrip,
+      isConnected,
+      redispatchMw,
+      scheduledSlack
+    };
+
+    function svgEl(name, attrs) {
+      const node = document.createElementNS(SVG_NS, name);
+      if (attrs) {
+        for (const key of Object.keys(attrs)) node.setAttribute(key, attrs[key]);
+      }
+      return node;
+    }
+
+    function segment(x1, y1, x2, y2, trim) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      return {
+        x1: x1 + ux * trim,
+        y1: y1 + uy * trim,
+        x2: x2 - ux * trim,
+        y2: y2 - uy * trim,
+        mx: (x1 + x2) / 2,
+        my: (y1 + y2) / 2,
+        ux,
+        uy,
+        angle: (Math.atan2(dy, dx) * 180) / Math.PI
+      };
+    }
+
+    function mountGrid(svg) {
+      const linesLayer = svgEl("g");
+      const busLayer = svgEl("g");
+      const lineNodes = {};
+      for (const line of CONFIG.grid.lines) {
+        const g = svgEl("g");
+        const title = svgEl("title");
+        const halo = svgEl("line", { "stroke-linecap": "round" });
+        const halo2 = svgEl("line", { "stroke-linecap": "round" });
+        const haloDot = svgEl("circle", { fill: "none" });
+        const a = svgEl("line", { class: "conductor" });
+        const b = svgEl("line", { class: "conductor" });
+        const broken = svgEl("line", { class: "conductor" });
+        const hinge = svgEl("g");
+        const pivot = svgEl("g", { class: "blade-pivot" });
+        const blade = svgEl("line", { "stroke-linecap": "butt" });
+        const pivotDot = svgEl("circle", { r: "2.4" });
+        const labelBg = svgEl("rect", { fill: "#f4f2ec", rx: "2" });
+        const label = svgEl("text", {
+          class: "line-pct",
+          "text-anchor": "middle",
+          "dominant-baseline": "central",
+          "font-size": "11",
+          "font-family": "IBM Plex Mono, ui-monospace, monospace"
+        });
+        halo.style.display = "none";
+        halo2.style.display = "none";
+        haloDot.style.display = "none";
+        labelBg.style.display = "none";
+        label.style.display = "none";
+        pivot.appendChild(blade);
+        hinge.appendChild(pivot);
+        hinge.appendChild(pivotDot);
+        g.appendChild(halo);
+        g.appendChild(halo2);
+        g.appendChild(title);
+        g.appendChild(broken);
+        g.appendChild(a);
+        g.appendChild(b);
+        g.appendChild(hinge);
+        g.appendChild(haloDot);
+        g.appendChild(labelBg);
+        g.appendChild(label);
+        linesLayer.appendChild(g);
+        lineNodes[line.id] = { g, title, a, b, broken, hinge, pivot, blade, pivotDot, halo, halo2, haloDot, labelBg, label };
+      }
+      const busNodes = {};
+      for (const bus of CONFIG.grid.buses) {
+        const g = svgEl("g");
+        const title = svgEl("title");
+        const outer = svgEl("circle");
+        const inner = svgEl("circle", { r: "15" });
+        const idText = svgEl("text", { class: "bus-id", "text-anchor": "middle", "dominant-baseline": "middle" });
+        const mwText = svgEl("text", { class: "bus-mw", "dominant-baseline": "middle" });
+        idText.textContent = bus.id;
+        title.textContent = bus.id + (bus.role === "slack" ? ", slack generator" : bus.role === "gen" ? ", generator" : ", load");
+        g.appendChild(title);
+        if (bus.role !== "load") g.appendChild(outer);
+        g.appendChild(inner);
+        g.appendChild(idText);
+        g.appendChild(mwText);
+        busLayer.appendChild(g);
+        busNodes[bus.id] = { outer, inner, idText, mwText };
+      }
+      svg.appendChild(linesLayer);
+      svg.appendChild(busLayer);
+      return { lineNodes, busNodes };
+    }
+
+    function lineLabelPos(seg) {
+      let nx = -seg.uy;
+      let ny = seg.ux;
+      const p1x = seg.mx + nx * 16;
+      const p1y = seg.my + ny * 16;
+      const p2x = seg.mx - nx * 16;
+      const p2y = seg.my - ny * 16;
+      const c1 = (p1x - 320) * (p1x - 320) + (p1y - 200) * (p1y - 200);
+      const c2 = (p2x - 320) * (p2x - 320) + (p2y - 200) * (p2y - 200);
+      let x = c2 > c1 ? p2x : p1x;
+      let y = c2 > c1 ? p2y : p1y;
+      x = Math.max(36, Math.min(604, x));
+      y = Math.max(18, Math.min(392, y));
+      return { x, y };
+    }
+
+    function updateGrid(view, sol, demandPct, sw, tripped, opts) {
+      if (!sol || !sol.ok) return;
+      const demoMode = !!(opts && opts.demo);
+      const highlight = opts && opts.highlight;
+      const trim = 22;
+
+      function hideHalo(node) {
+        node.halo.style.display = "none";
+        node.halo2.style.display = "none";
+        node.haloDot.style.display = "none";
+      }
+
+      function paintDemoLine(node, line, seg, flow, isTripped, isClosed) {
+        hideHalo(node);
+        const marked = highlight && highlight === line.id;
+        const pos = lineLabelPos(seg);
+        let text = "out";
+        let fill = "#8a8478";
+        if (!isTripped && isClosed && flow) {
+          text = pctText(flow.loading);
+          fill = "#161a1e";
+        } else if (!isTripped && !isClosed) {
+          text = "open";
+        }
+        node.label.textContent = text;
+        node.label.setAttribute("x", pos.x.toFixed(1));
+        node.label.setAttribute("y", pos.y.toFixed(1));
+        node.label.setAttribute("fill", fill);
+        node.label.style.display = "";
+        const w = Math.max(32, text.length * 6.5 + 10);
+        node.labelBg.setAttribute("x", (pos.x - w / 2).toFixed(1));
+        node.labelBg.setAttribute("y", (pos.y - 8).toFixed(1));
+        node.labelBg.setAttribute("width", w.toFixed(1));
+        node.labelBg.setAttribute("height", "16");
+        node.labelBg.style.display = "";
+
+        node.broken.setAttribute("x1", seg.x1);
+        node.broken.setAttribute("y1", seg.y1);
+        node.broken.setAttribute("x2", seg.x2);
+        node.broken.setAttribute("y2", seg.y2);
+
+        function stroke(el, x1, y1, x2, y2, color, width, dash) {
+          el.style.display = "";
+          el.setAttribute("x1", x1);
+          el.setAttribute("y1", y1);
+          el.setAttribute("x2", x2);
+          el.setAttribute("y2", y2);
+          el.setAttribute("stroke", color);
+          el.setAttribute("stroke-width", width);
+          if (dash) el.setAttribute("stroke-dasharray", dash);
+          else el.removeAttribute("stroke-dasharray");
+        }
+
+        if (isTripped) {
+          node.broken.setAttribute("stroke", "#a39e93");
+          node.broken.setAttribute("stroke-width", "1.15");
+          node.broken.setAttribute("stroke-dasharray", "1.5 6");
+          node.broken.style.display = "";
+          node.a.style.display = "none";
+          node.b.style.display = "none";
+          node.hinge.style.display = "none";
+          node.a.classList.remove("live");
+          node.b.classList.remove("live");
+          node.title.textContent = lineName(line.id) + " tripped, out";
+          return;
+        }
+        node.broken.style.display = "none";
+
+        if (!isClosed) {
+          const color = "#8a8478";
+          const width = "1.7";
+          if (line.switchable) {
+            const opening = 10;
+            const hx = seg.mx - seg.ux * 8;
+            const hy = seg.my - seg.uy * 8;
+            const ax2 = seg.mx - seg.ux * opening;
+            const ay2 = seg.my - seg.uy * opening;
+            const bx1 = seg.mx + seg.ux * opening;
+            const by1 = seg.my + seg.uy * opening;
+            stroke(node.a, seg.x1, seg.y1, ax2, ay2, color, width, null);
+            stroke(node.b, bx1, by1, seg.x2, seg.y2, color, width, null);
+            node.hinge.style.display = "";
+            node.hinge.setAttribute("transform", "translate(" + hx + " " + hy + ") rotate(" + seg.angle.toFixed(2) + ")");
+            node.blade.setAttribute("x1", "0");
+            node.blade.setAttribute("y1", "0");
+            node.blade.setAttribute("x2", "18");
+            node.blade.setAttribute("y2", "0");
+            node.blade.setAttribute("stroke", color);
+            node.blade.setAttribute("stroke-width", width);
+            node.pivotDot.setAttribute("cx", "0");
+            node.pivotDot.setAttribute("cy", "0");
+            node.pivotDot.setAttribute("fill", "#f4f2ec");
+            node.pivotDot.setAttribute("stroke", "#161a1e");
+            node.pivotDot.setAttribute("stroke-width", "1.2");
+            node.pivot.classList.add("open");
+            if (marked) {
+              stroke(node.halo, seg.x1, seg.y1, ax2, ay2, "#1eb888", "6", null);
+              stroke(node.halo2, bx1, by1, seg.x2, seg.y2, "#1eb888", "6", null);
+              node.haloDot.style.display = "";
+              node.haloDot.setAttribute("cx", String(hx));
+              node.haloDot.setAttribute("cy", String(hy));
+              node.haloDot.setAttribute("r", "9");
+              node.haloDot.setAttribute("stroke", "#1eb888");
+              node.haloDot.setAttribute("stroke-width", "2");
+            }
+          } else {
+            stroke(node.a, seg.x1, seg.y1, seg.x2, seg.y2, color, width, null);
+            node.b.style.display = "none";
+            node.hinge.style.display = "none";
+          }
+          node.a.classList.remove("live");
+          node.b.classList.remove("live");
+          node.title.textContent = lineName(line.id) + " open";
+          return;
+        }
+
+        const color = loadingColor(flow.loading, true);
+        const width = (1.35 + Math.min(flow.loading, 1.6) * 1.35).toFixed(2);
+        const mag = Math.abs(flow.flow);
+        const flowing = mag >= 1.5;
+        const duration = flowing ? 2.15 - Math.min(mag, 80) / 80 * 1.5 : 1.8;
+        const direction = flow.flow >= 0 ? "normal" : "reverse";
+
+        function paintFlow(el, x1, y1, x2, y2) {
+          el.style.display = "";
+          el.setAttribute("x1", x1);
+          el.setAttribute("y1", y1);
+          el.setAttribute("x2", x2);
+          el.setAttribute("y2", y2);
+          el.setAttribute("stroke", color);
+          el.setAttribute("stroke-width", width);
+          el.classList.toggle("live", flowing);
+          el.style.setProperty("--dur", duration.toFixed(2) + "s");
+          el.style.setProperty("--dir", direction);
+          if (flowing) el.removeAttribute("stroke-dasharray");
+          else el.setAttribute("stroke-dasharray", "7 5");
+        }
+
+        if (line.switchable) {
+          const opening = 10;
+          const hx = seg.mx - seg.ux * 8;
+          const hy = seg.my - seg.uy * 8;
+          paintFlow(node.a, seg.x1, seg.y1, seg.mx - seg.ux * opening, seg.my - seg.uy * opening);
+          paintFlow(node.b, seg.mx + seg.ux * opening, seg.my + seg.uy * opening, seg.x2, seg.y2);
+          node.hinge.style.display = "";
+          node.hinge.setAttribute("transform", "translate(" + hx + " " + hy + ") rotate(" + seg.angle.toFixed(2) + ")");
+          node.blade.setAttribute("x1", "0");
+          node.blade.setAttribute("y1", "0");
+          node.blade.setAttribute("x2", "18");
+          node.blade.setAttribute("y2", "0");
+          node.blade.setAttribute("stroke", color);
+          node.blade.setAttribute("stroke-width", width);
+          node.pivotDot.setAttribute("cx", "0");
+          node.pivotDot.setAttribute("cy", "0");
+          node.pivotDot.setAttribute("fill", "#f4f2ec");
+          node.pivotDot.setAttribute("stroke", "#161a1e");
+          node.pivotDot.setAttribute("stroke-width", "1.2");
+          node.pivot.classList.remove("open");
+          if (marked) {
+            stroke(node.halo, seg.x1, seg.y1, seg.x2, seg.y2, "#1eb888", "7.5", null);
+          }
+        } else {
+          paintFlow(node.a, seg.x1, seg.y1, seg.x2, seg.y2);
+          node.b.style.display = "none";
+          node.b.classList.remove("live");
+          node.hinge.style.display = "none";
+          if (marked) stroke(node.halo, seg.x1, seg.y1, seg.x2, seg.y2, "#1eb888", "7.5", null);
+        }
+        node.title.textContent = lineName(line.id) + "  " + fmtMw(flow.flow) + " MW  " + pctText(flow.loading);
+      }
+
+      for (const line of CONFIG.grid.lines) {
+        const node = view.lineNodes[line.id];
+        const busA = busById(line.a);
+        const busB = busById(line.b);
+        const seg = segment(busA.x, busA.y, busB.x, busB.y, trim);
+        const flow = sol.flows[line.id];
+        const isTripped = tripped === line.id;
+        const isClosed = line.switchable ? sw[line.id] && !isTripped : !isTripped;
+        if (demoMode) {
+          paintDemoLine(node, line, seg, flow, isTripped, isClosed);
+          continue;
+        }
+        node.broken.setAttribute("x1", seg.x1);
+        node.broken.setAttribute("y1", seg.y1);
+        node.broken.setAttribute("x2", seg.x2);
+        node.broken.setAttribute("y2", seg.y2);
+
+        if (isTripped) {
+          node.broken.setAttribute("stroke", "#a39e93");
+          node.broken.setAttribute("stroke-width", "1.15");
+          node.broken.setAttribute("stroke-dasharray", "2 7");
+          node.broken.style.display = "";
+          node.a.style.display = "none";
+          node.b.style.display = "none";
+          node.hinge.style.display = "none";
+          node.a.classList.remove("live");
+          node.b.classList.remove("live");
+          node.title.textContent = lineName(line.id) + " tripped";
+          continue;
+        }
+        node.broken.style.display = "none";
+
+        let color = "#8a8478";
+        let width = 1.25;
+        let live = false;
+        let duration = 1.8;
+        let direction = "normal";
+        if (isClosed && flow) {
+          color = loadingColor(flow.loading);
+          width = (1.35 + Math.min(flow.loading, 1.6) * 1.35).toFixed(2);
+          const mag = Math.abs(flow.flow);
+          if (mag >= 1.5) {
+            live = true;
+            duration = 2.15 - Math.min(mag, 80) / 80 * 1.5;
+            direction = flow.flow >= 0 ? "normal" : "reverse";
+          }
+          node.title.textContent = lineName(line.id) + "  " + fmtMw(flow.flow) + " MW  " + (flow.loading * 100).toFixed(0) + " %";
+        } else {
+          node.title.textContent = lineName(line.id) + " open";
+        }
+
+        function paint(el, x1, y1, x2, y2) {
+          el.style.display = "";
+          el.setAttribute("x1", x1);
+          el.setAttribute("y1", y1);
+          el.setAttribute("x2", x2);
+          el.setAttribute("y2", y2);
+          el.setAttribute("stroke", color);
+          el.setAttribute("stroke-width", width);
+          el.classList.toggle("live", live);
+          el.style.setProperty("--dur", duration.toFixed(2) + "s");
+          el.style.setProperty("--dir", direction);
+          if (!live) el.removeAttribute("stroke-dasharray");
+        }
+
+        if (line.switchable) {
+          const opening = 10;
+          const hx = seg.mx - seg.ux * 8;
+          const hy = seg.my - seg.uy * 8;
+          paint(node.a, seg.x1, seg.y1, seg.mx - seg.ux * opening, seg.my - seg.uy * opening);
+          paint(node.b, seg.mx + seg.ux * opening, seg.my + seg.uy * opening, seg.x2, seg.y2);
+          node.hinge.style.display = "";
+          node.hinge.setAttribute("transform", "translate(" + hx + " " + hy + ") rotate(" + seg.angle.toFixed(2) + ")");
+          node.blade.setAttribute("x1", "0");
+          node.blade.setAttribute("y1", "0");
+          node.blade.setAttribute("x2", "18");
+          node.blade.setAttribute("y2", "0");
+          node.blade.setAttribute("stroke", color);
+          node.blade.setAttribute("stroke-width", width);
+          node.pivotDot.setAttribute("cx", "0");
+          node.pivotDot.setAttribute("cy", "0");
+          node.pivotDot.setAttribute("fill", "#f4f2ec");
+          node.pivotDot.setAttribute("stroke", "#161a1e");
+          node.pivotDot.setAttribute("stroke-width", "1.2");
+          node.pivot.classList.toggle("open", !isClosed);
+        } else {
+          paint(node.a, seg.x1, seg.y1, seg.x2, seg.y2);
+          node.b.style.display = "none";
+          node.hinge.style.display = "none";
+        }
+      }
+
+      for (const bus of CONFIG.grid.buses) {
+        const node = view.busNodes[bus.id];
+        let mw = 0;
+        if (bus.id === "A") mw = sol.genA;
+        else if (bus.id === "B") mw = sol.genB;
+        else if (bus.id === "F") mw = sol.genF;
+        else mw = bus.base * demandPct / 100;
+        node.inner.setAttribute("cx", bus.x);
+        node.inner.setAttribute("cy", bus.y);
+        if (node.outer) {
+          node.outer.setAttribute("cx", bus.x);
+          node.outer.setAttribute("cy", bus.y);
+          node.outer.setAttribute("r", "20");
+        }
+        node.idText.setAttribute("x", bus.x);
+        node.idText.setAttribute("y", bus.y);
+        const anchor = bus.labelDx < 0 ? "end" : bus.labelDx > 0 ? "start" : "middle";
+        node.mwText.setAttribute("text-anchor", anchor);
+        node.mwText.setAttribute("x", bus.x + bus.labelDx);
+        node.mwText.setAttribute("y", bus.y + bus.labelDy);
+        node.mwText.textContent = demoMode
+          ? (bus.role === "load" ? "−" : "+") + fmtMw(Math.abs(mw)) + " MW"
+          : fmtMw(mw) + " MW";
+      }
+    }
+
+    function syncRange(input) {
+      const min = Number(input.min);
+      const max = Number(input.max);
+      const val = Number(input.value);
+      const p = ((val - min) / (max - min)) * 100;
+      input.style.setProperty("--p", p + "%");
+    }
+
+    function renderChart() {
+      const horizon = CONFIG.results.horizonDays;
+      const labelX = 360;
+      const valueX = 376;
+      const x0 = 510;
+      const plot = 410;
+      const px = plot / horizon;
+      const row = 46;
+      const y0 = 20;
+      const yAxis = document.getElementById("chart-axis-y");
+      const xAxis = document.getElementById("chart-axis-x");
+      if (yAxis) {
+        yAxis.setAttribute("x1", x0);
+        yAxis.setAttribute("x2", x0);
+      }
+      if (xAxis) {
+        xAxis.setAttribute("x1", x0);
+        xAxis.setAttribute("x2", x0 + plot);
+      }
+      const tick0 = document.getElementById("chart-tick-0");
+      if (tick0) tick0.setAttribute("x", x0);
+      CONFIG.results.bars.forEach((bar, i) => {
+        const label = bar.accent ? CONFIG.name + " v1" : bar.label;
+        const y = y0 + i * row;
+        const w = Math.max(0, bar.days * px);
+        const rect = document.getElementById("chart-bar-" + i);
+        const val = document.getElementById("chart-val-" + i);
+        const lab = document.getElementById("chart-lab-" + i);
+        if (!rect) return;
+        rect.setAttribute("x", x0);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", w.toFixed(2));
+        rect.setAttribute("fill", bar.accent ? "#1eb888" : "#c4bfb4");
+        const labelText = bar.share ? bar.days + " (" + bar.share + ")" : String(bar.days);
+        val.setAttribute("x", valueX);
+        val.setAttribute("y", y + 18);
+        val.setAttribute("text-anchor", "start");
+        val.textContent = labelText;
+        lab.textContent = label;
+        lab.setAttribute("x", labelX);
+        lab.setAttribute("y", y + 18);
+      });
+      [7, 14, 21, 28].forEach((day) => {
+        const x = x0 + (day / horizon) * plot;
+        const grid = document.getElementById("chart-grid-" + day);
+        const tick = document.getElementById("chart-tick-" + day);
+        if (grid) {
+          grid.setAttribute("x1", x);
+          grid.setAttribute("x2", x);
+        }
+        if (tick) tick.setAttribute("x", x);
+      });
+      const accent = CONFIG.results.bars.find((b) => b.accent);
+      if (accent) CONFIG.highlights[0].value = accent.days + " / " + horizon;
+      const list = document.getElementById("highlights");
+      if (!list) return;
+      list.replaceChildren();
+      for (const item of CONFIG.highlights) {
+        const wrap = document.createElement("div");
+        const dt = document.createElement("dt");
+        const dd = document.createElement("dd");
+        dt.textContent = item.value;
+        dd.textContent = item.note;
+        wrap.appendChild(dt);
+        wrap.appendChild(dd);
+        list.appendChild(wrap);
+      }
+    }
+
+    function boot() {
+      if (typeof document === "undefined") return;
+
+      document.querySelectorAll("[data-brand]").forEach((el) => {
+        el.textContent = CONFIG.name;
+      });
+      document.title = CONFIG.name + " — Readable, tested rules for congestion, learned from your own operators.";
+      const mail = document.getElementById("email-link");
+      if (mail) {
+        mail.textContent = CONFIG.email;
+        mail.href = "mailto:" + CONFIG.email;
+      }
+      const demandInput = document.getElementById("demand");
+      const thresholdInput = document.getElementById("threshold");
+      demandInput.min = CONFIG.demo.demandMin;
+      demandInput.max = CONFIG.demo.demandMax;
+      demandInput.step = CONFIG.demo.demandStep;
+      demandInput.value = CONFIG.demo.demandDefault;
+      thresholdInput.min = CONFIG.policy.thresholdMin;
+      thresholdInput.max = CONFIG.policy.thresholdMax;
+      thresholdInput.step = CONFIG.policy.thresholdStep;
+      thresholdInput.value = CONFIG.policy.thresholdDefault;
+
+      renderChart();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderChart);
+
+      const heroView = mountGrid(document.getElementById("hero-grid"));
+      const demoView = mountGrid(document.getElementById("demo-grid"));
+      const heroCaption = document.getElementById("hero-caption");
+
+      function heroFrame(now) {
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const mid = (CONFIG.hero.demandMinPct + CONFIG.hero.demandMaxPct) / 2;
+        const amp = (CONFIG.hero.demandMaxPct - CONFIG.hero.demandMinPct) / 2;
+        const pct = reduce ? 100 : mid + amp * Math.sin((2 * Math.PI * (now / 1000)) / CONFIG.hero.periodSec);
+        const shown = Math.round(pct);
+        const state = freshState();
+        const sol = solve(pct, state.genB, state.genF, closedSet(state.sw, null));
+        updateGrid(heroView, sol, pct, state.sw, null);
+        if (heroCaption.dataset.shown !== String(shown)) {
+          heroCaption.dataset.shown = String(shown);
+          heroCaption.textContent = "Fig. 0 — Schematic 8-bus grid, DC power flow, demand cycling " + shown + " %";
+        }
+        if (!reduce) requestAnimationFrame(heroFrame);
+      }
+      requestAnimationFrame(heroFrame);
+
+      const demo = { policyOn: true };
+      const tripSelect = document.getElementById("trip");
+      const captionEl = document.getElementById("policy-caption");
+      const modeNothing = document.getElementById("mode-nothing");
+      const modePolicy = document.getElementById("mode-policy");
+
+      function fillTrips() {
+        const sw = freshState().sw;
+        const current = tripSelect.value;
+        const legal = CONFIG.grid.lines.filter((l) => canTrip(sw, l.id));
+        const signature = legal.map((l) => l.id).join(",");
+        if (tripSelect.dataset.legal === signature) return;
+        tripSelect.dataset.legal = signature;
+        tripSelect.replaceChildren();
+        const none = document.createElement("option");
+        none.value = "";
+        none.textContent = "None";
+        tripSelect.appendChild(none);
+        for (const line of legal) {
+          const opt = document.createElement("option");
+          opt.value = line.id;
+          let label = lineName(line.id);
+          if (line.tie) label += " tie";
+          else if (line.switchable) label += " switch";
+          opt.textContent = label;
+          tripSelect.appendChild(opt);
+        }
+        const still = [...tripSelect.options].some((o) => o.value === current);
+        tripSelect.value = still ? current : "";
+      }
+
+      function markLower(offEl, onEl, vOff, vOn) {
+        offEl.classList.toggle("is-better", vOff < vOn);
+        onEl.classList.toggle("is-better", vOn < vOff);
+      }
+
+      function renderScoreboard(outcome) {
+        const off = outcome.nothing;
+        const on = outcome.policy;
+        const maxOff = document.getElementById("sb-max-off");
+        const maxOn = document.getElementById("sb-max-on");
+        const overOff = document.getElementById("sb-over-off");
+        const overOn = document.getElementById("sb-over-on");
+        const swOff = document.getElementById("sb-sw-off");
+        const swOn = document.getElementById("sb-sw-on");
+        const rdOff = document.getElementById("sb-rd-off");
+        const rdOn = document.getElementById("sb-rd-on");
+        const offOk = off.sol && off.sol.ok;
+        const onOk = on.sol && on.sol.ok;
+        maxOff.textContent = offOk ? pctText(off.sol.max) : "—";
+        maxOn.textContent = onOk ? pctText(on.sol.max) : "—";
+        overOff.textContent = offOk ? String(off.sol.nOver) : "—";
+        overOn.textContent = onOk ? String(on.sol.nOver) : "—";
+        swOff.textContent = String(off.nSwitch);
+        swOn.textContent = String(on.nSwitch);
+        rdOff.textContent = fmtRd(off.rd) + " MW";
+        rdOn.textContent = fmtRd(on.rd) + " MW";
+        if (offOk && onOk) {
+          markLower(maxOff, maxOn, off.sol.max, on.sol.max);
+          markLower(overOff, overOn, off.sol.nOver, on.sol.nOver);
+          markLower(rdOff, rdOn, off.rd, on.rd);
+        } else {
+          markLower(maxOff, maxOn, 0, 0);
+          markLower(overOff, overOn, 0, 0);
+          markLower(rdOff, rdOn, 0, 0);
+        }
+        const improved = offOk && onOk && on.sol.max < off.sol.max - 1e-9;
+        swOff.classList.remove("is-better");
+        swOn.classList.remove("is-better");
+        if (improved && on.nSwitch !== off.nSwitch) swOn.classList.add("is-better");
+        else if (off.nSwitch < on.nSwitch) swOff.classList.add("is-better");
+        else if (on.nSwitch < off.nSwitch) swOn.classList.add("is-better");
+      }
+
+      function updateReadouts() {
+        const demand = Number(demandInput.value);
+        const threshold = Math.round(Number(thresholdInput.value) * 10) / 10;
+        document.getElementById("demand-readout").textContent = demand + " %";
+        document.getElementById("threshold-readout").textContent = threshold.toFixed(1) + " %";
+        demandInput.setAttribute("aria-valuetext", demand + " percent");
+        thresholdInput.setAttribute("aria-valuetext", threshold.toFixed(1) + " percent");
+        syncRange(demandInput);
+        syncRange(thresholdInput);
+        return { demand, threshold };
+      }
+
+      function syncPresetSelection() {
+        const demand = Number(demandInput.value);
+        const threshold = Math.round(Number(thresholdInput.value) * 10) / 10;
+        const tripped = tripSelect.value || "";
+        document.querySelectorAll("#presets .preset").forEach((btn) => {
+          const match = Number(btn.dataset.demand) === demand
+            && Math.round(Number(btn.dataset.threshold) * 10) / 10 === threshold
+            && (btn.dataset.tripped || "") === tripped;
+          btn.setAttribute("aria-pressed", match ? "true" : "false");
+        });
+      }
+
+      function onDemoInput() {
+        const { demand, threshold } = updateReadouts();
+        const tripped = tripSelect.value || null;
+        const outcome = applyPolicy(demand, threshold, tripped);
+        const shown = demo.policyOn ? outcome.policy : outcome.nothing;
+        updateGrid(demoView, shown.sol, demand, shown.sw, tripped, {
+          demo: true,
+          highlight: demo.policyOn ? shown.lineId : null
+        });
+        renderScoreboard(outcome);
+        captionEl.textContent = outcome.caption;
+        syncPresetSelection();
+      }
+
+      function setMode(on) {
+        demo.policyOn = on;
+        modeNothing.setAttribute("aria-pressed", String(!on));
+        modePolicy.setAttribute("aria-pressed", String(on));
+        onDemoInput();
+      }
+
+      demandInput.addEventListener("input", onDemoInput);
+      thresholdInput.addEventListener("input", onDemoInput);
+      tripSelect.addEventListener("change", onDemoInput);
+      document.querySelectorAll("#presets .preset").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          demandInput.value = btn.dataset.demand;
+          thresholdInput.value = btn.dataset.threshold;
+          tripSelect.value = btn.dataset.tripped || "";
+          onDemoInput();
+        });
+      });
+      modeNothing.addEventListener("click", () => setMode(false));
+      modePolicy.addEventListener("click", () => setMode(true));
+      document.getElementById("reset").addEventListener("click", () => {
+        demandInput.value = CONFIG.demo.demandDefault;
+        thresholdInput.value = CONFIG.policy.thresholdDefault;
+        tripSelect.value = CONFIG.demo.trippedDefault || "";
+        demo.policyOn = true;
+        modeNothing.setAttribute("aria-pressed", "false");
+        modePolicy.setAttribute("aria-pressed", "true");
+        onDemoInput();
+      });
+
+      fillTrips();
+      if (CONFIG.demo.trippedDefault) tripSelect.value = CONFIG.demo.trippedDefault;
+      onDemoInput();
+    }
+
+    boot();
+  </script>
+</body>
+</html>
